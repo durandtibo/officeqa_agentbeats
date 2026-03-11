@@ -2,14 +2,14 @@ services:
   judge:
     image: ghcr.io/arnavsinghvi11/officeqa-judge:latest
     container_name: officeqa-judge
-    command: ["--host", "0.0.0.0", "--port", "9009", "--card-url", "http://judge:9009"]
+    command: [ "--host", "0.0.0.0", "--port", "9009", "--card-url", "http://judge:9009" ]
     ports:
       - 9009:9009
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=INFO
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9009/.well-known/agent-card.json"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9009/.well-known/agent-card.json" ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -23,7 +23,7 @@ services:
   officeqa_agent:
     image: ghcr.io/arnavsinghvi11/officeqa-agent:latest
     container_name: officeqa-agent
-    command: ["--host", "0.0.0.0", "--port", "9009", "--card-url", "http://officeqa_agent:9009"]
+    command: [ "--host", "0.0.0.0", "--port", "9009", "--card-url", "http://officeqa_agent:9009" ]
     ports:
       - 9019:9009
     environment:
@@ -33,9 +33,10 @@ services:
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-5.2}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-opus-4-5-20251101}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3-flash}
       - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH:-false}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9009/.well-known/agent-card.json"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9009/.well-known/agent-card.json" ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -49,7 +50,7 @@ services:
     volumes:
       - ./a2a-scenario.toml:/app/scenario.toml
       - ./output:/app/output
-    command: ["scenario.toml", "output/results.json"]
+    command: [ "scenario.toml", "output/results.json" ]
     depends_on:
       judge:
         condition: service_healthy
