@@ -36,6 +36,13 @@ try:
 except ImportError:
     ANTHROPIC_AVAILABLE = False
 
+try:
+    from google import genai
+    from google.genai import types as genai_types
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+
 
 SYSTEM_PROMPT = """You are a helpful agent that answers questions about the U.S. Treasury Bulletin. Ensure numerical accuracy and full precision in calculations while answering the question.
 
@@ -59,12 +66,17 @@ def get_llm_response(prompt: str) -> str:
     use_openai = (
         OPENAI_AVAILABLE and
         os.environ.get("OPENAI_API_KEY") and
-        (provider == "openai" or (provider == "" and not os.environ.get("ANTHROPIC_API_KEY")))
+        (provider == "openai" or (provider == "" and not os.environ.get("ANTHROPIC_API_KEY") and not os.environ.get("GEMINI_API_KEY")))
     )
     use_anthropic = (
         ANTHROPIC_AVAILABLE and
         os.environ.get("ANTHROPIC_API_KEY") and
-        (provider == "anthropic" or (provider == "" and not use_openai))
+        (provider == "anthropic" or (provider == "" and not use_openai and not os.environ.get("GEMINI_API_KEY")))
+    )
+    use_gemini = (
+        GEMINI_AVAILABLE and
+        os.environ.get("GEMINI_API_KEY") and
+        (provider == "gemini" or (provider == "" and not use_openai and not use_anthropic))
     )
 
     if use_openai:
@@ -115,6 +127,22 @@ def get_llm_response(prompt: str) -> str:
         response = client.messages.create(**kwargs)
         text_parts = [block.text for block in response.content if hasattr(block, 'text')]
         return "\n".join(text_parts) if text_parts else ""
+
+    if use_gemini:
+        client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        model = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+        enable_web_search = os.environ.get("ENABLE_WEB_SEARCH", "false").lower() == "true"
+        tools = [genai_types.Tool(google_search=genai_types.GoogleSearch())] if enable_web_search else None
+        response = client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                temperature=0,
+                tools=tools,
+            ),
+        )
+        return response.text or ""
 
     return "<FINAL_ANSWER>Unable to determine - no LLM configured</FINAL_ANSWER>"
 
